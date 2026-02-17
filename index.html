@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAPPIEST BIRTHDAY SUGAN</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #ff4ecd;
+            --secondary: #5a0572;
+            --glass: rgba(255, 255, 255, 0.15);
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            font-family: 'Quicksand', sans-serif;
+            min-height: 100vh;
+            background: #000;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: linear-gradient(to bottom, #1a001a, #4a004e);
+        }
+
+        .music-control {
+            position: fixed; top: 20px; right: 20px; z-index: 2000;
+            background: rgba(255, 255, 255, 0.2); width: 50px; height: 50px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border: 2px solid var(--primary);
+            backdrop-filter: blur(5px);
+        }
+
+        #home { padding: 60px 20px; text-align: center; }
+        
+        h1 {
+            font-family: 'Dancing Script', cursive;
+            font-size: clamp(3.5rem, 12vw, 5rem);
+            color: #fff;
+            text-shadow: 0 0 20px var(--primary), 0 0 30px var(--primary);
+            margin-bottom: 50px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px var(--primary); }
+            to { text-shadow: 0 0 40px var(--primary), 0 0 10px #fff; }
+        }
+
+        .container-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        .image-card {
+            position: relative; 
+            height: 350px; 
+            border-radius: 30px;
+            overflow: hidden; 
+            cursor: pointer;
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid rgba(255,255,255,0.2);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        }
+
+        .image-card:hover { 
+            transform: translateY(-10px); 
+            border-color: var(--primary);
+            box-shadow: 0 20px 45px rgba(255, 78, 205, 0.5);
+        }
+
+        .image-card img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            filter: brightness(0.85);
+            transition: 0.5s;
+        }
+
+        .image-card:hover img {
+            filter: brightness(1);
+        }
+
+        .card-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%);
+            display: flex; align-items: flex-end; padding: 25px;
+        }
+        .card-overlay h2 { 
+            color: white; 
+            margin: 0; 
+            font-size: 1.8rem; 
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.8);
+        }
+
+        .page {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.92); backdrop-filter: blur(15px);
+            z-index: 100; overflow-y: auto; display: none;
+        }
+        .page.active { display: block; }
+
+        .page-content {
+            max-width: 850px; margin: 50px auto; padding: 40px;
+            background: rgba(255, 255, 255, 0.08); 
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 40px; text-align: center;
+        }
+
+        .back-btn {
+            background: var(--primary); color: white; border: none;
+            padding: 12px 30px; border-radius: 50px; font-weight: 600;
+            cursor: pointer; margin-bottom: 20px;
+        }
+
+        .photo-scroll {
+            display: flex; gap: 15px; overflow-x: auto; padding: 20px;
+        }
+        .photo-scroll img {
+            height: 300px; border-radius: 20px; cursor: zoom-in;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+
+        #lightbox {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            display: none; align-items: center; justify-content: center; z-index: 3000;
+        }
+        #lightbox.active { display: flex; }
+        #lightbox img { max-width: 90%; max-height: 80vh; border-radius: 10px; border: 3px solid #fff; }
+
+        video { width: 100%; border-radius: 20px; }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <audio id="bgMusic" loop>
+        <source src="Birthday Song.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="music-control" onclick="toggleMusic()">
+        <span id="musicIcon">🎵</span>
+    </div>
+
+    <div id="home">
+        <h1>Happy Birthday Sugan 🌟 !</h1>
+        <div class="container-grid">
+            <div class="image-card" onclick="openPage('photosPage')">
+                <img src="Photos Container.png">
+                <div class="card-overlay"><h2>Memories 📸</h2></div>
+            </div>
+
+            <div class="image-card" onclick="triggerFirecrackers()">
+                <img src="Birthday .png">
+                <div class="card-overlay"><h2>The Surprise 🎉</h2></div>
+            </div>
+
+            <div class="image-card" onclick="openPage('videoPage')">
+                <img src="https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJndXh3ZzZqZzR4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKDkDbIDJieKbVm/giphy.gif">
+                <div class="card-overlay"><h2>Wish Video 🎥</h2></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="photosPage" class="page">
+        <div class="page-content">
+            <button class="back-btn" onclick="goHome()">← Back</button>
+            <h2 style="color:var(--primary)">Treasured Moments 💖</h2>
+            <div class="photo-scroll">
+                <img src="Image 4.jpg" onclick="viewImage(this.src)">
+                <img src="Image 1.jpg" onclick="viewImage(this.src)">
+                <img src="Image 2.png" onclick="viewImage(this.src)">
+                <img src="Image 3.jpg" onclick="viewImage(this.src)">
+                <img src="Image 5.jpg" onclick="viewImage(this.src)">
+                <img src="Image 6.jpg" onclick="viewImage(this.src)">
+                <img src="Image 7.jpg" onclick="viewImage(this.src)">
+                <img src="Image 8.jpg" onclick="viewImage(this.src)">
+                <img src="Image 9.jpg" onclick="viewImage(this.src)">
+                <img src="Image 10.png" onclick="viewImage(this.src)">
+            </div>
+        </div>
+    </div>
+
+    <div id="surprisePage" class="page">
+        <div class="page-content">
+            <button class="back-btn" onclick="goHome()">← Back</button>
+            <h2 style="font-size: 2.5rem; color: var(--primary);">Wishing U Happiest Birthday Dear 🌟 </h2>
+            <p>May God Always Bless U With Lots Of Love, Happiness, Joy And Everything u Deserve !</p>
+            <p> May you have all the joy your heart can hold, all the smile a day can bring, all the blessings a life can unfold, may you get the world's best in everything. Wishing you a Happy Birthday </p>
+            <p>May your special day be filled with love, laughter, and all the things that bring you joy. As you celebrate another year of life, I hope you look back with pride on all you've accomplished and look forward with excitement to all the wonderful experiences yet to come. Wishing you health, happiness, and endless blessings.</p>
+            <p>Happy Birthday Stay Always Blessed ! </p>
+            <div style="font-size: 4rem;">🎂 ✨ 🎁</div>
+        </div>
+    </div>
+
+    <div id="videoPage" class="page">
+        <div class="page-content">
+            <button class="back-btn" onclick="goHome()">← Back</button>
+            <h2 style="color:var(--primary)">Special Message 🎥</h2>
+            <video id="wishVideo" controls>
+                <source src="Sugan Video.mp4" type="video/mp4">
+            </video>
+        </div>
+    </div>
+
+    <div id="lightbox" onclick="closeLightbox()">
+        <img id="lightbox-img" src="">
+    </div>
+
+    <script>
+        function triggerFirecrackers() {
+            const duration = 5 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+            function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+                const particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+            if(audio.paused) toggleMusic();
+            openPage('surprisePage');
+        }
+
+        function startLiveBackground() {
+            const colors = ['#ff4ecd', '#ffffff', '#ffd166', '#00f2ff'];
+            (function frame() {
+                confetti({ particleCount: 1, angle: 60, spread: 55, origin: { x: 0 }, colors: colors });
+                confetti({ particleCount: 1, angle: 120, spread: 55, origin: { x: 1 }, colors: colors });
+                requestAnimationFrame(frame);
+            }());
+        }
+
+        const audio = document.getElementById('bgMusic');
+        const icon = document.getElementById('musicIcon');
+        function toggleMusic() {
+            if (audio.paused) { audio.play(); icon.innerText = '⏸️'; }
+            else { audio.pause(); icon.innerText = '🎵'; }
+        }
+
+        function openPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('home').style.display = 'none';
+            document.getElementById(id).classList.add('active');
+        }
+
+        function goHome() {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('home').style.display = 'block';
+            document.getElementById('wishVideo').pause();
+        }
+
+        function viewImage(src) {
+            document.getElementById('lightbox-img').src = src;
+            document.getElementById('lightbox').classList.add('active');
+        }
+
+        function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+
+        window.onload = () => { startLiveBackground(); };
+    </script>
+</body>
+</html>
